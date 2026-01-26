@@ -1,0 +1,183 @@
+"use client";
+
+import { useState, useRef } from "react";
+import { Search, Loader2, Plus, Film, BookOpen, Gamepad2, Camera, Sparkles } from "lucide-react";
+
+// --- LA CORRECTION EST ICI ---
+// On dit au composant : "Tu as le droit d'envoyer un film au parent"
+interface MovieSearchProps {
+  onAdd: (item: any) => void;
+}
+
+export default function MovieSearch({ onAdd }: MovieSearchProps) {
+  
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [searchType, setSearchType] = useState<'movie' | 'book' | 'game'>('movie');
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Recherche classique
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setLoading(true);
+    setResults([]);
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${searchType}`);
+      const data = await res.json();
+      setResults(data.results || []);
+    } catch (error) {
+      console.error("Erreur recherche", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Gestion du Scan
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    setResults([]); 
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // On appelle ton API de scan
+      const res = await fetch("/api/scan-books", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur serveur");
+      }
+
+      if (data.results && data.results.length > 0) {
+        setResults(data.results);
+      } else {
+        alert("Aucun livre détecté.");
+      }
+    } catch (error: any) {
+      console.error("Erreur scan", error);
+      alert("Erreur : " + error.message);
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    // DESIGN: Noir & Or (Nexus Style)
+    <div className="w-full max-w-2xl mx-auto bg-[#0a0a0a] p-4 md:p-6 rounded-2xl border border-yellow-500/20 shadow-[0_0_30px_rgba(234,179,8,0.1)] relative overflow-hidden">
+
+      {/* OVERLAY DE CHARGEMENT (Scan) */}
+      {isScanning && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center text-center p-6 backdrop-blur-sm animate-in fade-in">
+          <div className="relative mb-4">
+            <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-20 animate-pulse"></div>
+            <Loader2 size={48} className="text-yellow-500 animate-spin relative z-10" />
+          </div>
+          <h3 className="text-xl font-bold text-white">Analyse IA en cours...</h3>
+        </div>
+      )}
+
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelect} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
+      {/* ONGLETS */}
+      <div className="flex gap-2 mb-6 justify-center overflow-x-auto pb-2">
+        {[
+          { id: 'movie', icon: Film, label: 'Films' },
+          { id: 'book', icon: BookOpen, label: 'Livres' },
+          { id: 'game', icon: Gamepad2, label: 'Jeux' }
+        ].map((type) => (
+          <button 
+            key={type.id}
+            onClick={() => setSearchType(type.id as any)} 
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border ${
+              searchType === type.id 
+                ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg shadow-yellow-500/20' 
+                : 'bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-yellow-500/50 hover:text-yellow-500'
+            }`}
+          >
+            <type.icon size={16}/> {type.label}
+          </button>
+        ))}
+      </div>
+
+      {/* RECHERCHE + SCAN */}
+      <div className="relative mb-6 flex gap-3">
+        <form onSubmit={handleSearch} className="relative flex-grow group">
+            <input
+              type="text"
+              placeholder={searchType === 'book' ? "Titre, auteur ou ISBN..." : "Rechercher une œuvre..."}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full bg-[#111] border border-[#333] text-white px-4 py-4 rounded-xl focus:outline-none focus:border-yellow-500 focus:shadow-[0_0_15px_rgba(234,179,8,0.2)] transition-all pl-12 placeholder-gray-600"
+            />
+            <Search className="absolute left-4 top-4 text-gray-500 group-focus-within:text-yellow-500 transition-colors" size={20} />
+            
+            <button type="submit" disabled={loading} className="absolute right-3 top-3 bg-[#222] hover:bg-yellow-500 hover:text-black text-gray-300 p-2 rounded-lg transition-all border border-[#333] hover:border-yellow-500">
+                {loading ? <Loader2 className="animate-spin" size={18}/> : <Search size={18}/>}
+            </button>
+        </form>
+
+        {searchType === 'book' && (
+            <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isScanning}
+                className="bg-gradient-to-br from-yellow-600 to-yellow-800 hover:from-yellow-500 hover:to-yellow-700 text-black p-4 rounded-xl shadow-lg transition-transform active:scale-95 border border-yellow-400 flex items-center justify-center relative overflow-hidden group"
+            >
+                {isScanning ? <Loader2 className="animate-spin text-black" size={24} /> : <Camera size={24} strokeWidth={2.5} className="relative z-10" />}
+                 <Sparkles size={12} className="absolute top-1 right-1 text-white opacity-70" />
+            </button>
+        )}
+      </div>
+
+      {/* RÉSULTATS */}
+      <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-yellow-900 scrollbar-track-[#111]">
+        {results.map((item, index) => (
+          <div 
+            key={item.id || index} 
+            className="group flex gap-4 p-3 rounded-xl bg-[#151515] hover:bg-[#202020] border border-[#222] hover:border-yellow-500/30 cursor-pointer transition-all duration-300 relative overflow-hidden"
+            onClick={() => onAdd(item)}
+          >
+            <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            <div className="w-12 h-16 bg-[#000] rounded-lg overflow-hidden flex-shrink-0 border border-[#333] shadow-sm">
+               {item.poster_path || item.poster ? (
+                 <img src={item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : item.poster} alt={item.title} className="w-full h-full object-cover" />
+               ) : (
+                 <div className="w-full h-full flex items-center justify-center text-gray-700 text-xs font-bold">N/A</div>
+               )}
+            </div>
+            <div className="flex-grow flex flex-col justify-center min-w-0 z-10">
+              <h4 className="font-bold text-gray-100 text-base leading-tight truncate group-hover:text-yellow-500 transition-colors">
+                {item.title || item.name}
+              </h4>
+              <span className="text-xs text-gray-500 mt-1">
+                {item.release_date || item.first_air_date || item.subtitle || "Date inconnue"}
+              </span>
+            </div>
+            <button className="self-center p-2 bg-[#222] rounded-full text-gray-500 group-hover:bg-yellow-500 group-hover:text-black transition-all z-10 transform group-hover:rotate-90">
+                <Plus size={20} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,41 +1,24 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dépendances (NE JAMAIS ENVOYER ÇA, c'est trop lourd)
+node_modules/
+package-lock.json # Optionnel : certains préfèrent l'envoyer, d'autres non. Si tu débutes, tu peux le laisser hors du gitignore (donc ne mets pas cette ligne)
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Next.js build output
+.next/
+out/
+build/
+dist/
 
-# testing
-/coverage
+# Fichiers d'environnement (TRÈS IMPORTANT : contient tes mots de passe/clés API)
+.env
+.env*.local
+.env.production
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs et debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Système (Mac/Windows/Linux)
+.DS_Store
+Thumbs.db
