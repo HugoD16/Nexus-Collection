@@ -112,6 +112,7 @@ export default function MovieSearch({ onAdd }: MovieSearchProps) {
               placeholder="Titre, auteur..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+	      suppressHydrationWarning
               className="w-full bg-[#111] border border-[#333] text-gray-200 px-5 py-4 rounded-xl focus:border-yellow-500 transition-all pl-12"
             />
             <Search className="absolute left-4 top-4 text-gray-600 group-focus-within:text-yellow-500" size={20} />
